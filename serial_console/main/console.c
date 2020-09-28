@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "esp_err.h"
 #include "string.h"
 #include <stdio.h>
@@ -14,11 +15,25 @@
 #define GPIO_LED3 33
 
 static QueueHandle_t uart0_queue;
+static QueueHandle_t led_queue;
+static QueueHandle_t pulse_queue;
 
 struct flags
 {
     int count_str_size;
     int position;
+};
+    
+struct led_on_off
+{
+    int status;
+    int num;
+};
+
+struct led_pulse
+{
+    int frequency;
+    int num;
 };
 
 struct buttons
@@ -124,43 +139,93 @@ char **mx_strsplit(const char *s, char c)
     arr[size] = NULL;
     return arr;
 }
+
+void mx_free_arr(void **arr) {
+    if (arr != NULL) {
+        for (int i = 0; arr[i] != NULL; i++) {
+            free(arr[i]);
+        }
+        free(arr);
+    }
+}
 ///////////////////////////////////////////////////////////
 
-void print(void *str) {
-    printf("%s\n", (char *)str);
+void wrong_command(char *str) {
+    uart_write_bytes(UART_NUM, "command not found: ", strlen("command not found: "));
+    uart_write_bytes(UART_NUM, str, strlen(str));
+    uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
 }
 
-typedef struct a_s {
-    
-    void (*name) (void *data);
-} a_t;
+int arr_size(char **arr) {
+    int size = 0;
 
-void led_on(void *flag) {
-    _Bool f = (_Bool)flag;
-
-    gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
-    if (f == 1) {
-        gpio_set_level(GPIO_LED1, 1);
+    if (arr == NULL) {
+        return -1;
     }
-    else {
-        gpio_set_level(GPIO_LED1, 0);
-    }
-}
-
-void command_handler(char *str)
-{
-    char ttt[] = "asdfdafdfaffasfasf";
-    a_t test[2];
-    test[0].name = print;
-    test[1].name = led_on;
-    test[0].name((void *)ttt);
-    test[1].name((void *)1);
-    char **arr = mx_strsplit(str, ' ');
-
 
     for (int i = 0; arr[i] != NULL; i++) {
-        printf("%s\n", arr[i]);
+        size++;
     }
+    return size;
+}
+
+void command_handler(char *str) {
+    int data = 0;
+    char **arr = mx_strsplit(str, ' ');
+    struct led_on_off *led = (struct led_on_off *) malloc(sizeof(struct led_on_off) * 1);
+    struct led_pulse *pulse = (struct led_pulse *) malloc(sizeof(struct led_pulse) * 1);
+
+    data = arr_size(arr);
+    if (data > 0 && data < 5) {
+
+    if (strcmp(arr[0], "led") == 0) {
+        if (strcmp(arr[1], "on") == 0) {
+            data = atoi(arr[2]);
+            if (data > 0 && data < 4) {
+                led->status = 1;
+                led->num = data;
+                xQueueSend( led_queue, ( void * ) &led, ( TickType_t ) 0 );
+            }
+            else {
+                wrong_command(arr[2]);
+            }
+        } else if (strcmp(arr[1], "off") == 0) {
+            data = atoi(arr[2]);
+            if (data > 0 && data < 4) {
+                led->status = 0;
+                led->num = data;
+                xQueueSend( led_queue, ( void * ) &led, ( TickType_t ) 0 );
+            }
+            else {
+                wrong_command(arr[2]);
+            }
+        } else if (strcmp(arr[1], "pulse") == 0) {
+            data = atoi(arr[2]);
+
+            if (data > 0 && data < 4) {
+                pulse->num = data;
+                data = atoi(arr[3]);
+                pulse->frequency = data;
+                xQueueSend(pulse_queue, (void *) &pulse, ( TickType_t ) 0);
+            }
+            else {
+                wrong_command(arr[2]);
+            }
+        }
+        else {
+            wrong_command(arr[1]);
+        }
+    }
+    else {
+        wrong_command(arr[0]);
+    }
+    }
+    else {
+        // wrong_command(" ");
+    }
+    mx_free_arr((void **)arr);
+    free(led);
+    free(pulse);
 }
 
 void del_symbol_inside_str(char *str, int position)
@@ -194,7 +259,7 @@ void add_symbol_to_str(char *str, struct flags *f)
     char big_str[] = ">Your command is to bid";
 
     uart_get_buffered_data_len(UART_NUM, &buf_size);
-    printf("%d\n", buf_size);
+    // printf("%d\n", buf_size);
     if (buf_size > 30) 
     {
         uart_write_bytes(UART_NUM, (char *)buttons.enter, 3);
@@ -321,11 +386,114 @@ void task_read_bytes() {
             // uart_disable_pattern_det_intr(UART_NUM);
             if (event.type == UART_DATA) {
                 add_symbol_to_str(str, &f);
-                printf("C = %d\n P = %d\n", f.count_str_size, f.position);
+                // printf("C = %d\n P = %d\n", f.count_str_size, f.position);
             }
         }
-        printf("%s\n", str);
+        // printf("%s\n", str);
         // uart_pattern_queue_reset(UART_NUM, 20); 
+    }
+}
+
+void pulse_led_use_PWM() {
+    struct led_pulse *pulse = NULL;
+    ledc_timer_config_t led_timer = {
+        .speed_mode = LEDC_HIGH_SPEED_MODE,
+        .timer_num = LEDC_TIMER_0,
+        .freq_hz = 5000,
+        .duty_resolution = LEDC_TIMER_13_BIT,
+        .clk_cfg = LEDC_AUTO_CLK,
+    };
+    ledc_channel_config_t channel[3] = {
+        {
+            .channel    = LEDC_CHANNEL_0,
+            .duty       = 0,
+            .gpio_num   = 27,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_TIMER_0
+        },
+        {
+            .channel    = LEDC_CHANNEL_0,
+            .duty       = 0,
+            .gpio_num   = 27,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_TIMER_0
+        },
+        {
+            .channel    = LEDC_CHANNEL_0,
+            .duty       = 0,
+            .gpio_num   = 27,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_TIMER_0
+        },
+    };
+    int frequency = 0;
+
+    ledc_timer_config(&led_timer);
+    ledc_channel_config(&channel[0]);
+    ledc_fade_func_install(0);
+    while (1) {
+        // printf("11111111111-----11111111111\n");
+        if (xQueueReceive(pulse_queue, (void * )&pulse, (portTickType)portMAX_DELAY)) {
+            gpio_set_level(GPIO_LED1, 0);
+            ledc_timer_config(&led_timer);
+    ledc_channel_config(&channel[0]);
+    ledc_fade_func_install(0);
+    frequency = pulse->frequency;
+            // gpio_set_direction(GPIO_LED3, GPIO_MODE_DISABLE);
+            
+            while(1) {
+                ledc_set_fade_with_time(channel[0].speed_mode, channel[0].channel, 3000, 100);
+                ledc_fade_start(channel[0].speed_mode, channel[0].channel, LEDC_FADE_NO_WAIT);
+                                if (xQueueReceive(pulse_queue, (void * )&pulse, 10)) {
+                                    frequency = pulse->frequency;
+                                    gpio_set_level(GPIO_LED1, 0);
+                    ledc_timer_config(&led_timer);
+            ledc_channel_config(&channel[0]);
+            ledc_fade_func_install(0);
+                    printf("111111111111\n");
+                }
+                ledc_set_fade_with_time(channel[0].speed_mode, channel[0].channel, 0, 100);
+                ledc_fade_start(channel[0].speed_mode, channel[0].channel, LEDC_FADE_NO_WAIT);
+                // vTaskDelay(4000 / portTICK_PERIOD_MS);
+                printf("1\n");
+                if (xQueueReceive(pulse_queue, (void * )&pulse, 10)) {
+                    gpio_set_level(GPIO_LED1, 0);
+                    ledc_timer_config(&led_timer);
+            ledc_channel_config(&channel[0]);
+            ledc_fade_func_install(0);
+                    printf("222222222222\n");
+                }
+            }
+        }
+    }
+    
+}
+
+void led_on_off() {
+    struct led_on_off *led = NULL;
+
+    while (true) {
+        if (xQueueReceive(led_queue, (void * )&led, (portTickType)portMAX_DELAY)) {
+            switch (led->num) {
+                case 1:
+                gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
+                gpio_set_level(GPIO_LED1, led->status);
+                break;
+
+                case 2:
+                gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
+                gpio_set_level(GPIO_LED2, led->status);
+                break;
+
+                case 3:
+                gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
+                gpio_set_level(GPIO_LED3, led->status);
+                break;
+            }
+        }
     }
 }
 
@@ -345,6 +513,15 @@ void app_main()
     uart_set_pin(UART_NUM, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     uart_pattern_queue_reset(UART_NUM, 20);
 
+    led_queue = xQueueCreate( 10, sizeof( struct led_on_off * ) );
+    pulse_queue = xQueueCreate( 10, sizeof( struct led_pulse * ) );
+    if (pulse_queue == NULL)
+        printf("pulse_queue ------\n");
+
     xTaskCreate(task_read_bytes, "task_read_bytes", 12048, NULL, 10, NULL);
+    xTaskCreate(pulse_led_use_PWM, "pulse_led_use_PWM", 12048, NULL, 10, NULL);
+    xTaskCreate(led_on_off, "led_on_off", 1048, NULL, 10, NULL);
 
 }
+
+
