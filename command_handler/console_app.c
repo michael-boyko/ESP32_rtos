@@ -3,12 +3,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-typedef void (*func) (void *data);
-
+typedef char *(*func) (char *data);
 
 typedef struct  s_pars_tree {
     char  *command;
-    int parameter;
     func name_func;
     struct s_pars_tree *next;
     struct s_pars_tree *subsidiary;
@@ -16,17 +14,16 @@ typedef struct  s_pars_tree {
 
 typedef struct s_command_config {
     char  *command;
-    int parameter;
     func name_func;
 } t_command_config;
 
-struct s_func {
+typedef struct s_func { // maybe need to concat two structs
     char *parameter;
     func name_func;
-};
+} t_func;
 
 typedef struct s_commands_queue {
-    struct s_func *data;
+    t_func *data;
     struct s_commands_queue *next;
 } t_commands_queue;
 
@@ -122,7 +119,9 @@ void mx_free_arr(char **arr) {
     }
 }
 
-t_commands_queue *mx_create_node_queue(void *data) {
+
+/////////////////////////////////////////////////////////////////////////////////
+static t_commands_queue *mx_create_node_queue(t_func *data) {
     t_commands_queue *list = malloc(sizeof(t_commands_queue));
 
     list->data = data;
@@ -130,7 +129,7 @@ t_commands_queue *mx_create_node_queue(void *data) {
     return list;
 }
 
-void mx_push_back_queue(t_commands_queue **list, void *data) {
+static void mx_push_back_queue(t_commands_queue **list, t_func *data) {
     t_commands_queue *new_node = mx_create_node_queue(data);
     t_commands_queue *s = *list;
 
@@ -164,31 +163,34 @@ static char *str_concatenation(char **arr, int size, int position) {
             str = strcat(str, " ");
         }
     }
+    if (str[0] == 0) {
+        free(str);
+        str = NULL;
+    }
     return str;
 }
 
-void command_handler(char *str, t_pars_tree **commands) {
+char *command_handler(char *str, t_pars_tree **commands) {
     int i = 0;
     int amount_words = 0;
+    char *error = NULL;
     char **arr_command = mx_strsplit(str, ' ');
     t_pars_tree *command = NULL;
     t_commands_queue *commands_queue = NULL;
-    struct s_func func = {NULL, NULL};
+    t_func *func = NULL;
 
     if (arr_command != NULL && commands != NULL) {
         command = commands[arr_command[0][0]];
         amount_words = mx_count_words(str, ' ');
         while (command->command != NULL && arr_command[i] != NULL) {
             if (mx_strcmp(command->command, arr_command[i]) == 0) {
-                if (command->name_func != NULL && command->parameter > 0 && (amount_words - i - 1) > 0) {
-                    func.parameter = str_concatenation(arr_command, amount_words, i);
-                    func.name_func = command->name_func;
-                    mx_push_back_queue(&commands_queue, (void *)&func);
+                if (command->name_func != NULL) {
+                    func = (t_func *) malloc(sizeof(t_func *));
+                    func->parameter = str_concatenation(arr_command, amount_words, i);
+                    func->name_func = command->name_func;
+                    mx_push_back_queue(&commands_queue, (void *)func);
                     command = command->subsidiary;
                     i++;
-                } else if (command->name_func != NULL && command->parameter == 0 && (amount_words - i - 1) == 0) {
-                    mx_push_back_queue(&commands_queue, NULL);
-                    i = amount_words;
                 } else {
                     command = command->subsidiary;
                     i++;
@@ -201,37 +203,65 @@ void command_handler(char *str, t_pars_tree **commands) {
             }
         }
     }
-    if (commands_queue != NULL) {
+    if (commands_queue != NULL) {                  //need to add arr error for return when more then 1 comand
         while (commands_queue != NULL) {
-            commands_queue->data->name_func(commands_queue->data->parameter);
-            free(commands_queue->data->parameter);
-            free(commands_queue);
+            error = commands_queue->data->name_func(commands_queue->data->parameter);
+            free(commands_queue->data->parameter); // need to check leacks
             commands_queue = commands_queue->next;
         }
+        free(commands_queue);
     }
     else {
-        printf("command not found\n"); //change to true func
+        error = mx_strnew(strlen("command not found"));
+        error = strcat(error, "command not found");
     }
     mx_free_arr(arr_command);
-    //need add return
+
+    return error;
+}
+/////////////////////////////////////////////////////////////////////////////////
+
+
+char *print(char *str) {
+    char *s = NULL;
+
+    if (str == NULL) {
+        s = mx_strnew(5);
+        s = strcat(s, "Hello");
+    }
+    else {
+        printf("%s\n", str);
+    }
+    return s;
 }
 
-void print(void *str) {
-    printf("%s\n", (char *)str);
+char *led_on(char *str) {
+    char *s = NULL;
+    char **arr_command = mx_strsplit(str, ' ');
+    int amount_words = mx_count_words(str, ' ');
+
+    if (amount_words == 1) {
+        printf("led on %d\n", atoi(arr_command[0]));
+    } else {
+        s = mx_strnew(strlen("parameters not found"));
+        s = strcat(s, "parameters not found");
+    }
+    return s;
 }
 
-t_pars_tree *mx_create_node_tree(t_command_config *cc) {
+
+/////////////////////////////////////////////////////////////////////////////////
+static t_pars_tree *mx_create_node_tree(t_command_config *cc) {
     t_pars_tree *list = (t_pars_tree *) malloc(sizeof(t_pars_tree));
     
     list->command = cc->command;
-    list->parameter = cc->parameter;
     list->name_func = cc->name_func;
     list->next = NULL;
     list->subsidiary = NULL;
     return list;
 }
 
-void mx_push_back_tree_next(t_pars_tree **list, void *data) {
+static void mx_push_back_tree_next(t_pars_tree **list, void *data) {
     t_pars_tree *new_list = mx_create_node_tree(data);
     t_pars_tree *tmp = *list;
 
@@ -241,7 +271,7 @@ void mx_push_back_tree_next(t_pars_tree **list, void *data) {
     tmp->next = new_list;
 }
 
-void mx_push_back_tree_subsidiary(t_pars_tree **list, void *data) {
+static void mx_push_back_tree_subsidiary(t_pars_tree **list, void *data) {
     t_pars_tree *new_list = mx_create_node_tree(data);
     t_pars_tree *tmp = *list;
 
@@ -251,20 +281,20 @@ void mx_push_back_tree_subsidiary(t_pars_tree **list, void *data) {
     tmp->subsidiary = new_list;
 }
 
-void command_regist(t_command_config *config, t_pars_tree **commands) { //segmentation fault with similar command
+void command_regist(t_command_config *config, t_pars_tree **commands) { // need add defend when empty config
     t_pars_tree *command = NULL;
     t_pars_tree *tmp = NULL;
     char **arr_command = mx_strsplit(config->command, ' ');
     int amount_words = mx_count_words(config->command, ' ');
-    int i = 1;
+    int i = 0;
     _Bool stop = 0;
-    t_command_config cc = {NULL, 0, NULL};
+    t_command_config cc = {NULL, NULL};
 
     command = commands[arr_command[0][0]];
 
-    while (amount_words >= i) {
+    while (amount_words > i) {
         if (command->command == NULL) {
-            command->command = arr_command[i - 1];
+            command->command = arr_command[i];
             mx_push_back_tree_subsidiary(&command, &cc);
             mx_push_back_tree_next(&command, &cc);
             tmp = command;
@@ -272,17 +302,18 @@ void command_regist(t_command_config *config, t_pars_tree **commands) { //segmen
             i++;
         }
         else {
-            while (mx_strcmp(command->command, arr_command[i - 1]) != 0 && command->next != NULL && stop == 0) {
-                if (mx_strcmp(command->command, arr_command[i - 1]) == 0) {
+            while (mx_strcmp(command->command, arr_command[i]) != 0 && command->next != NULL && stop == 0) {
+                if (mx_strcmp(command->command, arr_command[i]) == 0) {
                     stop = 1;
                 }
                 else {
                     command = command->next;
                 }
             }
-            if (mx_strcmp(command->command, arr_command[i - 1]) == 0) {
-                free(arr_command[i - 1]);
-                arr_command[i - 1] = NULL;
+            if (mx_strcmp(command->command, arr_command[i]) == 0) {
+                free(arr_command[i]);
+                arr_command[i] = NULL;
+                tmp = command;
                 command = command->subsidiary;
                 i++;
             }
@@ -290,7 +321,7 @@ void command_regist(t_command_config *config, t_pars_tree **commands) { //segmen
                 while (command->next != NULL) {
                     command = command->next;
                 }
-                command->command = arr_command[i - 1];
+                command->command = arr_command[i];
                 mx_push_back_tree_next(&command, &cc);
                 mx_push_back_tree_subsidiary(&command, &cc);
                 tmp = command;
@@ -301,61 +332,70 @@ void command_regist(t_command_config *config, t_pars_tree **commands) { //segmen
         stop = 0;
     }
     tmp->name_func = config->name_func;
-    tmp->parameter = config->parameter;
     free(arr_command);
 }
+//////////////////////////////////////////////////////////////////////////////////
 
-t_pars_tree *create_arr_commands() {
+
+t_pars_tree **create_arr_commands() {
+    t_pars_tree **commands = (t_pars_tree **) malloc(sizeof(t_pars_tree **) * 256);
+    t_command_config cc = {NULL, NULL};
+
     for (int i = 0; i < 256; i++) {
-        commands[i] = mx_create_node_tree(&ccc);
+        commands[i] = mx_create_node_tree(&cc);
     }
+    return commands;
 }
 
+
+
 int main() {
-    t_command_config ccc = {NULL, 0, NULL};
-    t_pars_tree *commands[256];               //create arr of commands
-	
+    char *error = NULL;
+    t_pars_tree **commands = create_arr_commands();               //create arr of commands
 
 	t_command_config cc = {              //set command config 
         .command = "led on",
-        .parameter = 1,
-        .name_func = print,
+        .name_func = led_on,
     };
     t_command_config cc1 = {              //set command config 
         .command = "led off",
-        .parameter = 1,
         .name_func = print,
     };
     t_command_config cc2 = {              //set command config 
         .command = "led pulse",
-        .parameter = 1,
         .name_func = print,
     };
     t_command_config cc3 = {              //set command config 
-        .command = "print i nt",
-        .parameter = 1,
+        .command = "led 0 1 2 3 4 5 6 7 8 9",
         .name_func = print,
     };
-    // command_regist(&cc, NULL);
+    t_command_config cc4 = {              //set command config 
+        .command = "print",
+        .name_func = print,
+    };
+
+    command_regist(&cc, commands);
     command_regist(&cc1, commands);
     command_regist(&cc2, commands);
     command_regist(&cc3, commands);
+    command_regist(&cc4, commands);
 
-    // printf("%s (next->) %s (subsidiary->) %s\n", commands['l']->command,
-    //  commands['l']->next->command, commands['l']->subsidiary->command);
-    // printf("%s (next->) %s (subsidiary->) %s\n", commands['l']->subsidiary->command,
-    //  commands['l']->subsidiary->next->command, commands['l']->subsidiary->subsidiary->command);
+	error = command_handler("led on 1 0,1", commands);
+    command_handler("led pulse abra cadabra sym salabym!", commands);
+    command_handler("print it abra cadabra sym salabym!", commands);
+    command_handler("led off abra cadabra sym salabym!", commands);
+    command_handler("led on Hi, my darling!", commands);
+    command_handler("led off Good bye, my darling!", commands);
+    command_handler("led pulse abra cadabra sym salabym!", commands);
+    command_handler("print Hello World!", commands);
+    // error = command_handler("led on 3", commands);
+    if (error == NULL) {
+        printf("everything is ok\n");
+    }
+    else {
+        printf("%s\n", error);
+    }
 
-	// command_handler("led on 1 0,1", commands);
-    // command_handler("led pulse abra cadabra sym salabym!", commands);
-    // command_handler("print it abra cadabra sym salabym!", commands);
-    // command_handler("led off abra cadabra sym salabym!", commands);
-    command_handler("prnt int abra cadabra sym salabym!", commands);
-    command_handler("led on abra cadabra sym salabym!", commands);
-    command_handler("print i n t abra cadabra sym salabym!", commands);
-    command_handler(NULL, commands);
-    // command_handler("led pulse 1 0,1", commands);
-    // printf("%d\n", mx_strcmp(NULL, "led"));
 	// system("leaks -q  test");
 	return 0;
 }

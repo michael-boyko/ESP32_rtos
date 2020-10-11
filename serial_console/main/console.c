@@ -54,9 +54,9 @@ const struct buttons buttons = {
 uint8_t e[3] = { 27, '[', '@',}; // insert one space
 int tmp = 0;
 
+
 ////////////////////////////////////////////////////////////               split
-char *mx_strnew(const int size)
-{
+char *mx_strnew(const int size) {
     char *s = NULL;
 
     if (size < 0)
@@ -71,8 +71,7 @@ char *mx_strnew(const int size)
     return s;
 }
 
-int mx_count_words(const char *str, char c)
-{
+int mx_count_words(const char *str, char c) {
     int count = 0;
 
     if (str == NULL)
@@ -98,8 +97,7 @@ int mx_count_words(const char *str, char c)
     return count;
 }
 
-int strlen_mod(const char *s, char c)
-{
+int strlen_mod(const char *s, char c) {
     int count = 0;
 
     while(*s != c && *s != '\0')
@@ -109,8 +107,7 @@ int strlen_mod(const char *s, char c)
     }
     return count;
 }
-char **mx_strsplit(const char *s, char c)
-{
+char **mx_strsplit(const char *s, char c) {
     int size = 0;
     int j = 0;
     char **arr = NULL;
@@ -149,6 +146,7 @@ void mx_free_arr(void **arr) {
     }
 }
 ///////////////////////////////////////////////////////////
+
 
 void wrong_command(char *str) {
     uart_write_bytes(UART_NUM, "command not found: ", strlen("command not found: "));
@@ -228,31 +226,26 @@ void command_handler(char *str) {
     free(pulse);
 }
 
-void del_symbol_inside_str(char *str, int position)
-{
+void del_symbol_inside_str(char *str, int position) {
     int len = strlen(str);
 
-    for (int i = position; i <= len; i++)
-    {
+    for (int i = position; i <= len; i++) {
         str[i - 1] = str[i];
     }
 }
 
-void add_symbol_inside_str(char *str, int position, char c)
-{
+void add_symbol_inside_str(char *str, int position, char c) {
     char tmp = '\0';
     int len = strlen(str);
 
-    for (int i = position; i <= len; i++)
-    {
+    for (int i = position; i <= len; i++) {
         tmp = str[i];
         str[i] = c;
         c = tmp;
     }
 }
 
-void add_symbol_to_str(char *str, struct flags *f) 
-{
+void add_symbol_to_str(char *str, struct flags *f)  {
     uint8_t *buf = NULL;
     int readed = 0;
     size_t buf_size = 0;
@@ -260,8 +253,7 @@ void add_symbol_to_str(char *str, struct flags *f)
 
     uart_get_buffered_data_len(UART_NUM, &buf_size);
     // printf("%d\n", buf_size);
-    if (buf_size > 30) 
-    {
+    if (buf_size > 30) {
         uart_write_bytes(UART_NUM, (char *)buttons.enter, 3);
         uart_write_bytes(UART_NUM, big_str, strlen(big_str));
         uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
@@ -269,28 +261,22 @@ void add_symbol_to_str(char *str, struct flags *f)
         f->position = 0;
         f->count_str_size = 0;
     } 
-    else 
-    {
+    else  {
         buf = malloc(sizeof(uint8_t) * (buf_size + 1));
         memset(buf, '\0', buf_size + 1);
         readed = uart_read_bytes(UART_NUM, buf, buf_size + 1, buf_size);
-        if (buf[0] == 27)
-        {
-            if (buf[2] == 'D' && f->position > 0) 
-            {
+        if (buf[0] == 27) {
+            if (buf[2] == 'D' && f->position > 0) {
                 uart_write_bytes(UART_NUM, (char *)buttons.left, 1);
                 f->position--;
             }
-            else if (buf[2] == 'C' && f->position < f->count_str_size)
-            {
+            else if (buf[2] == 'C' && f->position < f->count_str_size) {
                 uart_write_bytes(UART_NUM, (char *)buttons.right, 3);
                 f->position++;
             }
         }
-        else
-        {
-            if (buf[0] == 13)
-            {
+        else {
+            if (buf[0] == 13) {
                 uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
                 uart_flush(UART_NUM);
 
@@ -495,29 +481,8 @@ void pulse_led_use_PWM() {
     
 }
 
-void led_on_off() {
-    struct led_on_off *led = NULL;
-
-    while (true) {
-        if (xQueueReceive(led_queue, (void * )&led, (portTickType)portMAX_DELAY)) {
-            switch (led->num) {
-                case 1:
-                gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
-                gpio_set_level(GPIO_LED1, led->status);
-                break;
-
-                case 2:
-                gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
-                gpio_set_level(GPIO_LED2, led->status);
-                break;
-
-                case 3:
-                gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
-                gpio_set_level(GPIO_LED3, led->status);
-                break;
-            }
-        }
-    }
+void led_on(char *parameter) {
+    
 }
 
 void app_main() 
@@ -529,10 +494,6 @@ void app_main()
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     };
-    // gpio_set_direction(33, GPIO_MODE_OUTPUT);
-    // gpio_set_level(33, 1);
-    // gpio_set_pull_mode(33, GPIO_PULLUP_ONLY);
-    // pulse_led_use_PWM(); // delete
     
     uart_driver_install(UART_NUM, 2048, 2048, 20, &uart0_queue, 0);
     uart_param_config(UART_NUM, &uart_config);
@@ -540,15 +501,8 @@ void app_main()
     uart_set_pin(UART_NUM, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     uart_pattern_queue_reset(UART_NUM, 20);
 
-    // led_queue = xQueueCreate( 10, sizeof( struct led_on_off * ) );
-    // pulse_queue = xQueueCreate( 10, sizeof( struct led_pulse * ) );
-    // if (pulse_queue == NULL)
-    //     printf("pulse_queue ------\n");
-
     xTaskCreate(task_read_bytes, "task_read_bytes", 12048, NULL, 10, NULL);
     // xTaskCreate(pulse_led_use_PWM, "pulse_led_use_PWM", 12048, NULL, 10, NULL);
-    // xTaskCreate(led_on_off, "led_on_off", 1048, NULL, 10, NULL);
-
 }
 
 
