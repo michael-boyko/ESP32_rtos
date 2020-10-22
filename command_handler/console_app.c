@@ -6,8 +6,8 @@
 typedef char *(*func) (char *data);
 
 typedef struct  s_pars_tree {
-    char  *command;
     func name_func;
+    char  *command;
     struct s_pars_tree *next;
     struct s_pars_tree *subsidiary;
 } t_pars_tree;
@@ -84,6 +84,7 @@ int strlen_mod(const char *s, char c) {
     }
     return count;
 }
+
 char **mx_strsplit(const char *s, char c) {
     int size = 0;
     int j = 0;
@@ -346,7 +347,6 @@ t_pars_tree **create_arr_commands() {
     }
     return commands;
 }
-
 
 
 int main() {
