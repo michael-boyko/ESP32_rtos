@@ -1,8 +1,6 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
-#include "stdio.h"
-#include "string.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
@@ -12,6 +10,7 @@
 #include "driver/uart.h"
 #include "../components/mylib/mylib.h"
 #include "../components/uart_console/readuart.h"
+#include "../components/command_api/command_api.h"
 
 #define UART_NUM UART_NUM_1
 #define GPIO_LED1 27

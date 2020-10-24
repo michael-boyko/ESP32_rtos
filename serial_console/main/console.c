@@ -1,7 +1,6 @@
 #include "console.h"
 
 void app_main() {
-
     uart_config_t uart_config = {
         .baud_rate = 9600,
         .data_bits = UART_DATA_8_BITS,
