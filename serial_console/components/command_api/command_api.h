@@ -3,7 +3,7 @@
 
 #include "../mylib/mylib.h"
 
-typedef char *(*func) (char *data);
+typedef void (*func) (char *data);
 
 typedef struct  s_pars_tree {
     func name_func;

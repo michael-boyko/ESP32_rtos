@@ -55,13 +55,16 @@ static void data_to_do(char *str, uint8_t *buf, t_flag *f, int read) {
     }
 }
 
-static void enter_to_do(char *str, t_flag *f) {
+static void enter_to_do(char *str, t_flag *f, t_pars_tree **commands) {
+    char *error = NULL;
+
+    printf("%s\n", str);
     uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
     uart_flush(UART_NUM);
-    if (strcmp("clear", str) == 0) {
-        uint8_t clear[8] = {27, '[', '2', 'J', 27, '[', 'H', '>'};
-        uart_write_bytes(UART_NUM, (char *)clear, 8);
+    if (str[0] != 0) {
+        error = command_handler(str, commands);
     }
+    printf("Enter!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     memset(str, '\0', strlen(str));
     f->position = 0;
     f->count_str_size = 0;
@@ -83,7 +86,7 @@ static void backspace_to_do(char *str, t_flag *f, int buf_size) {
     }
 }
 
-void uart_data_handler(char *str, t_flag *f) {
+void uart_data_handler(char *str, t_flag *f, t_pars_tree **commands) {
     uint8_t *buf = NULL;
     int read = 0;
     size_t buf_size = 0;
@@ -98,7 +101,7 @@ void uart_data_handler(char *str, t_flag *f) {
             esc_to_do(buf, f);
             break;
         case 13:
-            enter_to_do(str, f);
+            enter_to_do(str, f, commands);
             break;
         case 127:
             backspace_to_do(str, f, read);
@@ -110,20 +113,47 @@ void uart_data_handler(char *str, t_flag *f) {
     buf = NULL;
 }
 
+void clear_command(char *argv) {
+    uint8_t clear[8] = {27, '[', '2', 'J', 27, '[', 'H', '>'};
+
+    if (argv[0] != 0) {
+        printf("NULL-----\n");
+        uart_write_bytes(UART_NUM, (char *)clear, 8);
+    } else {
+        printf("DATA-----\n");
+        uart_write_bytes(UART_NUM, argv, strlen(argv));
+    }
+}
+
+void commands_registration(t_pars_tree **commands) {
+    t_command_config cc = {
+            .command = "clear",
+            .name_func = clear_command,
+    };
+
+    command_regist(&cc, commands);
+}
+
 void uart_event_handler() {
     uart_event_t event;
     char str[1024];
+    memset(str, 0, 1024);
     t_flag f = {0, 0};
+    t_pars_tree **commands = NULL;
+    commands = create_arr_commands();
 
-    memset(str, '\0', 1024);
+    commands_registration(commands);
+    printf("this command registered \"%s\"\n", commands[99]->command);
+//    str = mx_strnew(1024);
     while (true) {
         if (xQueueReceive(uart0_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
             if (event.type == UART_DATA) {
-                uart_data_handler(str, &f);
+                uart_data_handler(str, &f, commands);
+                printf("%s\n", str);
                 printf("str = %d  pos = %d\n", f.count_str_size, f.position);
             }
             if (event.type == UART_BREAK) {
-                printf("UART_BREAk------------------------------\n");
+                printf("UART_BREAK------------------------------\n");
             }
             if (event.type == UART_PATTERN_DET) {
                 printf("UART_PATTERN_DET------------------------------\n");

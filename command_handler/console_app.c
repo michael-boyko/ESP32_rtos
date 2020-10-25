@@ -180,7 +180,7 @@ char *command_handler(char *str, t_pars_tree **commands) {
     t_commands_queue *commands_queue = NULL;
     t_func *func = NULL;
 
-    if (arr_command != NULL && commands != NULL) {
+    if (arr_command != NULL && commands != NULL  && str[0] != '\0') {
         command = commands[arr_command[0][0]];
         amount_words = mx_count_words(str, ' ');
         while (command->command != NULL && arr_command[i] != NULL) {
@@ -353,41 +353,41 @@ int main() {
     char *error = NULL;
     t_pars_tree **commands = create_arr_commands();               //create arr of commands
 
-	t_command_config cc = {              //set command config 
-        .command = "led on",
-        .name_func = led_on,
-    };
-    t_command_config cc1 = {              //set command config 
-        .command = "led off",
-        .name_func = print,
-    };
-    t_command_config cc2 = {              //set command config 
-        .command = "led pulse",
-        .name_func = print,
-    };
-    t_command_config cc3 = {              //set command config 
-        .command = "led 0 1 2 3 4 5 6 7 8 9",
-        .name_func = print,
-    };
+//	t_command_config cc = {              //set command config
+//        .command = "led on",
+//        .name_func = led_on,
+//    };
+//    t_command_config cc1 = {              //set command config
+//        .command = "led off",
+//        .name_func = print,
+//    };
+//    t_command_config cc2 = {              //set command config
+//        .command = "led pulse",
+//        .name_func = print,
+//    };
+//    t_command_config cc3 = {              //set command config
+//        .command = "led 0 1 2 3 4 5 6 7 8 9",
+//        .name_func = print,
+//    };
     t_command_config cc4 = {              //set command config 
         .command = "print",
         .name_func = print,
     };
 
-    command_regist(&cc, commands);
-    command_regist(&cc1, commands);
-    command_regist(&cc2, commands);
-    command_regist(&cc3, commands);
+//    command_regist(&cc, commands);
+//    command_regist(&cc1, commands);
+//    command_regist(&cc2, commands);
+//    command_regist(&cc3, commands);
     command_regist(&cc4, commands);
 
-	error = command_handler("led on 1 0,1", commands);
-    command_handler("led pulse abra cadabra sym salabym!", commands);
-    command_handler("print it abra cadabra sym salabym!", commands);
-    command_handler("led off abra cadabra sym salabym!", commands);
-    command_handler("led on Hi, my darling!", commands);
-    command_handler("led off Good bye, my darling!", commands);
-    command_handler("led pulse abra cadabra sym salabym!", commands);
-    command_handler("print Hello World!", commands);
+//	error = command_handler("led on 1 0,1", commands);
+//    command_handler("led pulse abra cadabra sym salabym!", commands);
+//    command_handler("print it abra cadabra sym salabym!", commands);
+//    command_handler("led off abra cadabra sym salabym!", commands);
+//    command_handler("led on Hi, my darling!", commands);
+//    command_handler("led off Good bye, my darling!", commands);
+//    command_handler("led pulse abra cadabra sym salabym!", commands);
+    command_handler("print\0", commands);
     // error = command_handler("led on 3", commands);
     if (error == NULL) {
         printf("everything is ok\n");
@@ -396,7 +396,7 @@ int main() {
         printf("%s\n", error);
     }
 
-	// system("leaks -q  test");
+	 system("leaks -q  test");
 	return 0;
 }
 
