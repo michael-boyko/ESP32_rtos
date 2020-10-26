@@ -1,17 +1,16 @@
 #include "command_api.h"
 
-static t_commands_queue *mx_create_node_queue(t_func *data) {
-    printf("tut--------------\n" );
-    t_commands_queue *list = (t_commands_queue *) malloc(sizeof(t_commands_queue) * 1);
-    printf("ne ---- tut--------------\n" );
+static t_commands_queue *mx_create_node_queue(func name_func, char *str) {
+    t_commands_queue *list = (t_commands_queue *) malloc(sizeof(t_commands_queue));
 
-    list->data = data;
+    list->func = name_func;
+    list->command = str;
     list->next = NULL;
     return list;
 }
 
-static void mx_push_back_queue(t_commands_queue **list, t_func *data) {
-    t_commands_queue *new_node = mx_create_node_queue(data);
+static void mx_push_back_queue(t_commands_queue **list, func name_func, char *str) {
+    t_commands_queue *new_node = mx_create_node_queue(name_func, str);
     t_commands_queue *s = *list;
 
     if (s == NULL) {
@@ -53,29 +52,21 @@ static char *str_concatenation(char **arr, int size, int position) {
 char *command_handler(char *str, t_pars_tree **commands) {
     int i = 0;
     int amount_words = 0;
+    char *argv_for_func = NULL;
     char *error = NULL;
     char **arr_command = mx_strsplit(str, ' ');
     t_pars_tree *command = NULL;
     t_commands_queue *commands_queue = NULL;
-    t_func *func = NULL;
+//    t_func *func = NULL;
 
     if (arr_command != NULL && commands != NULL && str[0] != '\0') { // need to do something with str '\0'
         command = commands[(int)arr_command[0][0]];
         amount_words = mx_count_words(str, ' ');
         while (command->command != NULL && arr_command[i] != NULL) {
             if (mx_strcmp(command->command, arr_command[i]) == 0) {
-                printf("if----------\n");
                 if (command->name_func != NULL) {
-
-                    func = (t_func *) malloc(sizeof(t_func *));
-
-                    func->parameter = str_concatenation(arr_command, amount_words, i);
-                    printf("func->parameter)----------\n");
-                    func->name_func = command->name_func;
-                    printf("func->name_func)----------\n");
-                    mx_push_back_queue(&commands_queue, (void *)func);
-
-
+                    argv_for_func = str_concatenation(arr_command, amount_words, i);
+                    mx_push_back_queue(&commands_queue, command->name_func, argv_for_func);
                     command = command->subsidiary;
                     i++;
                 } else {
@@ -84,19 +75,16 @@ char *command_handler(char *str, t_pars_tree **commands) {
                 }
             }
             else {
-                printf("else----------\n");
                 while (mx_strcmp(command->command, arr_command[i]) != 0 && command->command != NULL) {
                     command = command->next;
                 }
             }
-            printf("BUG -------BUG--------BUG--------BUG-------BUG------BUG--------BUG--------BUG\n");
         }
     }
     if (commands_queue != NULL) {                  //need to add arr error for return when more then 1 comand
         while (commands_queue != NULL) {
-            printf("commands_queue -------------------------------------------------------\n");
-            commands_queue->data->name_func(commands_queue->data->parameter);
-            free(commands_queue->data->parameter); // need to check leacks
+            commands_queue->func(commands_queue->command);
+            free(commands_queue->command);
             commands_queue = commands_queue->next;
         }
         free(commands_queue);

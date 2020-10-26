@@ -23,7 +23,8 @@ typedef struct s_func { // maybe need to concat two structs
 } t_func;
 
 typedef struct s_commands_queue {
-    t_func *data;
+    char  *command;
+    void (*func) (char *data);
     struct s_commands_queue *next;
 } t_commands_queue;
 

@@ -58,13 +58,16 @@ static void data_to_do(char *str, uint8_t *buf, t_flag *f, int read) {
 static void enter_to_do(char *str, t_flag *f, t_pars_tree **commands) {
     char *error = NULL;
 
-    printf("%s\n", str);
     uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
     uart_flush(UART_NUM);
     if (str[0] != 0) {
         error = command_handler(str, commands);
+        if (error != NULL) {
+            uart_write_bytes(UART_NUM, error, strlen(error));
+            uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
+            mx_strdel(&error);
+        }
     }
-    printf("Enter!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     memset(str, '\0', strlen(str));
     f->position = 0;
     f->count_str_size = 0;
@@ -116,12 +119,10 @@ void uart_data_handler(char *str, t_flag *f, t_pars_tree **commands) {
 void clear_command(char *argv) {
     uint8_t clear[8] = {27, '[', '2', 'J', 27, '[', 'H', '>'};
 
-    if (argv[0] != 0) {
-        printf("NULL-----\n");
+    if (argv == NULL) {
         uart_write_bytes(UART_NUM, (char *)clear, 8);
     } else {
-        printf("DATA-----\n");
-        uart_write_bytes(UART_NUM, argv, strlen(argv));
+        error_output(argv);
     }
 }
 
@@ -130,8 +131,18 @@ void commands_registration(t_pars_tree **commands) {
             .command = "clear",
             .name_func = clear_command,
     };
+    t_command_config cc1 = {
+            .command = "led on",
+            .name_func = led_on,
+    };
+    t_command_config cc2 = {
+            .command = "led off",
+            .name_func = led_off,
+    };
 
     command_regist(&cc, commands);
+    command_regist(&cc1, commands);
+    command_regist(&cc2, commands);
 }
 
 void uart_event_handler() {
@@ -139,12 +150,10 @@ void uart_event_handler() {
     char str[1024];
     memset(str, 0, 1024);
     t_flag f = {0, 0};
-    t_pars_tree **commands = NULL;
-    commands = create_arr_commands();
+    t_pars_tree **commands = create_arr_commands();
 
     commands_registration(commands);
-    printf("this command registered \"%s\"\n", commands[99]->command);
-//    str = mx_strnew(1024);
+//    printf("this command registered \"%s\"\n", commands[99]->command);
     while (true) {
         if (xQueueReceive(uart0_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
             if (event.type == UART_DATA) {

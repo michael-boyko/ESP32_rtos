@@ -4,17 +4,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
-#include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "driver/uart.h"
 #include "../command_api/command_api.h"
 #include "../mylib/mylib.h"
+#include "../led/led.h"
 
 #define UART_NUM UART_NUM_1
-#define GPIO_LED1 27
-#define GPIO_LED2 26
-#define GPIO_LED3 33
 
 QueueHandle_t uart0_queue;
 
@@ -41,5 +38,6 @@ static struct buttons buttons = {
 static uint8_t insert_one_space[3] = { 27, '[', '@',}; // insert one space
 
 void uart_event_handler();
+void error_output(char *argv);
 
 #endif
