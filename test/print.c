@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include "ctype.h"
 
-
-
 //uint8_t font6x8[] = {
 //0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   // sp
 //0x00, 0x00, 0x00, 0x2f, 0x00, 0x00,   // !
@@ -154,53 +152,98 @@
 //	return 0;
 //}
 
-_Bool is_argv1_correct(char *argv1) {
-    _Bool correct = 1;
+typedef struct s_list {
+    void  *data;
+    struct s_list *next;
+} t_list;
 
-    while (*argv1 != 0) {
-        if (!isdigit(*argv1)) {
-            correct = 0;
-        }
-        argv1++;
+t_list *mx_create_node(void *data) {
+    t_list *list = (t_list *) malloc(sizeof(t_list));
+
+    if (list != NULL) {
+        list->data = data;
+        list->next = NULL;
+    } else {
+        exit(1);
     }
-    return correct;
+
+    return list;
 }
 
-_Bool is_argv2_correct(char *argv2) {
-    _Bool correct = 1;
-    int count = 0;
+void mx_push_front(t_list **list, void *data) {
+    t_list *new_node = mx_create_node(data);
+    t_list *l = *list;
+    t_list *tmp = NULL;
 
-    while (*argv2 != 0) {
-        if (!isdigit(*argv2) && *argv2 != '.') {
-            correct = 0;
-        }
-        if (*argv2 == '.') {
-            count++;
-        }
-        argv2++;
+    if (l == NULL) {
+        *list = new_node;
+    } else {
+        tmp = l;
+        *list = new_node;
+        new_node->next = tmp;
     }
-    if (count > 1) {
-        correct = 0;
+}
+
+void mx_pop_back(t_list **head) {
+    t_list *h = *head;
+
+    if (h != NULL) {
+        if (h->next == NULL) {
+            free(h);
+            *head = NULL;
+        } else {
+            while (h->next->next != NULL) {
+                h = h->next;
+            }
+            free(h->next);
+            h->next = NULL;
+        }
+    } else {
+        head = NULL;
     }
-    return correct;
+}
+
+void mx_push_back(t_list **list, void *data) {
+    t_list *new_node = mx_create_node(data);
+    t_list *l = *list;
+
+    if (l == NULL) {
+        *list = new_node;
+    } else {
+        while(l->next != NULL) {
+            l = l->next;
+        }
+        l->next = new_node;
+    }
 }
 
 int main() {
-    int i = 0;
-    double f =0.0;
+    t_list *list = NULL;
 
-    i = atoi("123a32");
-    f = atof("123.1,2");
-
-    if (!is_argv1_correct("1.2332")) {
-        printf("INT not done\n");
+//    mx_push_back(&list, "arrrr");
+//    mx_push_back(&list, "arrrr");
+//    mx_push_back(&list, "arrrr");
+//    mx_push_back(&list, "arrrr");
+    mx_push_front(&list, "1");
+    mx_push_front(&list, "2");
+    mx_push_front(&list, "3");
+    mx_push_front(&list, "4");
+    mx_push_front(&list, "5");
+    mx_pop_back(&list);
+    mx_pop_back(&list);
+    mx_pop_back(&list);
+    mx_pop_back(&list);
+    mx_pop_back(&list);
+    if (list == NULL) {
+        printf("asdfasfasfd----------------\n");
     }
-    if (!is_argv2_correct("  .  .12.332")) {
-        printf("DOUBLE not done\n");
-    }
-//    printf("int %d\n", i);
-    printf("double %f\n", f);
+    mx_pop_back(&list);
 
+//    while (list != NULL) {
+//        printf("%s\n", list->data);
+//        list = list->next;
+//    }
+    system("leaks -q  test");
     return 0;
 }
 
