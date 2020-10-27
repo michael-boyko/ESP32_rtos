@@ -1,6 +1,7 @@
 #ifndef LED_H
 #define LED_H
 
+#include "driver/ledc.h"
 #include "driver/gpio.h"
 #include "../mylib/mylib.h"
 #include "../uart_console/readuart.h"

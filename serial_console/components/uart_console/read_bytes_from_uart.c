@@ -127,7 +127,7 @@ void clear_command(char *argv) {
 }
 
 void commands_registration(t_pars_tree **commands) {
-    t_command_config cc = {
+    t_command_config cc0 = {
             .command = "clear",
             .name_func = clear_command,
     };
@@ -139,21 +139,25 @@ void commands_registration(t_pars_tree **commands) {
             .command = "led off",
             .name_func = led_off,
     };
+    t_command_config cc3 = {
+            .command = "led pulse",
+            .name_func = led_pulse,
+    };
 
-    command_regist(&cc, commands);
+    command_regist(&cc0, commands);
     command_regist(&cc1, commands);
     command_regist(&cc2, commands);
+    command_regist(&cc3, commands);
 }
 
 void uart_event_handler() {
     uart_event_t event;
     char str[1024];
-    memset(str, 0, 1024);
     t_flag f = {0, 0};
     t_pars_tree **commands = create_arr_commands();
 
+    memset(str, 0, 1024);
     commands_registration(commands);
-//    printf("this command registered \"%s\"\n", commands[99]->command);
     while (true) {
         if (xQueueReceive(uart0_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
             if (event.type == UART_DATA) {

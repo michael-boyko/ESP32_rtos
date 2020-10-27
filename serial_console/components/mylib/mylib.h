@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "stdio.h"
 #include "string.h"
+#include "ctype.h"
 
 char *mx_strnew(const int size);
 int mx_count_words(const char *str, char c);
