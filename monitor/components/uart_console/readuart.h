@@ -7,13 +7,23 @@
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "driver/uart.h"
+#include "freertos/queue.h"
 #include "../command_api/command_api.h"
 #include "../mylib/mylib.h"
 #include "../dht11/dht11.h"
+#include "freertos/semphr.h"
 
 #define UART_NUM UART_NUM_1
 
 QueueHandle_t uart0_queue;
+QueueHandle_t dht_queue;
+xSemaphoreHandle xSemaphore;
+
+typedef struct s_dht11 {
+    int temperature;
+    int humidity;
+    TickType_t time;
+} t_dht11;
 
 typedef struct s_flags {
     int count_str_size;
@@ -22,14 +32,14 @@ typedef struct s_flags {
 
 static struct buttons
 {
-    uint8_t enter[4];
+    char enter[5];
     uint8_t backspace[3];
     uint8_t left[3];
     uint8_t right[3];
 };
 
 static struct buttons buttons = {
-        {27, '[', 'E', '>',}, // Enter
+        "\n\r>", // Enter
         {0x08, ' ', 0x08,},  // Backspace
         {0x08, '[', 'D',},  // Left button
         {27, '[', 'C',},  // Right button

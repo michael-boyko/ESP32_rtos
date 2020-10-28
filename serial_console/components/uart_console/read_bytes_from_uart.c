@@ -89,7 +89,7 @@ static void backspace_to_do(char *str, t_flag *f, int buf_size) {
     }
 }
 
-void uart_data_handler(char *str, t_flag *f, t_pars_tree **commands) {
+static void uart_data_handler(char *str, t_flag *f, t_pars_tree **commands) {
     uint8_t *buf = NULL;
     int read = 0;
     size_t buf_size = 0;
@@ -116,7 +116,7 @@ void uart_data_handler(char *str, t_flag *f, t_pars_tree **commands) {
     buf = NULL;
 }
 
-void clear_command(char *argv) {
+static void clear_command(char *argv) {
     uint8_t clear[8] = {27, '[', '2', 'J', 27, '[', 'H', '>'};
 
     if (argv == NULL) {
@@ -126,7 +126,7 @@ void clear_command(char *argv) {
     }
 }
 
-void commands_registration(t_pars_tree **commands) {
+static void commands_registration(t_pars_tree **commands) {
     t_command_config cc0 = {
             .command = "clear",
             .name_func = clear_command,

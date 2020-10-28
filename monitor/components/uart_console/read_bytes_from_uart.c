@@ -64,7 +64,7 @@ static void enter_to_do(char *str, t_flag *f, t_pars_tree **commands) {
         error = command_handler(str, commands);
         if (error != NULL) {
             uart_write_bytes(UART_NUM, error, strlen(error));
-            uart_write_bytes(UART_NUM, (char *)buttons.enter, 4);
+            uart_write_bytes(UART_NUM, (char *)buttons.enter, 5);
             mx_strdel(&error);
         }
     }
@@ -126,14 +126,59 @@ static void clear_command(char *argv) {
     }
 }
 
+static void print_time(TickType_t time) {
+    TickType_t current_time = xTaskGetTickCount();
+//    printf("%d\n", current_time);
+    char char_time[10] = {0,0,0,0,0,0,0,0,0,0,};
+
+    if (time > 0) {
+        itoa((current_time - time) / 100, char_time, 10);
+        uart_write_bytes(UART_NUM, "   ", 3);
+        uart_write_bytes(UART_NUM, char_time, strlen(char_time));
+        uart_write_bytes(UART_NUM, " sec ago", 8);
+    }
+}
+
+void print_log_data_dht11(char *argv) {
+    t_dht11 data_t_h = {0, 0, 0};
+    uint8_t size = uxQueueMessagesWaiting(dht_queue);
+    char t[10] = {0,0,0,0,0,0,0,0,0,0,};
+    char h[10] = {0,0,0,0,0,0,0,0,0,0,};
+
+    if (argv == NULL) {
+        xSemaphoreTake(xSemaphore, ( TickType_t ) 0);
+        for (int i = 0; i < size; i++) {
+            xQueueReceive(dht_queue,  &data_t_h,( TickType_t ) 0);
+            uart_write_bytes(UART_NUM, "Temperature ", 12);
+            itoa(data_t_h.temperature, t, 10);
+            uart_write_bytes(UART_NUM, t, strlen(t));
+            uart_write_bytes(UART_NUM, "   ", 3);
+            uart_write_bytes(UART_NUM, "Humidity ", 9);
+            itoa(data_t_h.humidity, h, 10);
+            uart_write_bytes(UART_NUM, h, strlen(h));
+            print_time(data_t_h.time);
+            uart_write_bytes(UART_NUM, (char *)buttons.enter, 5);
+            xQueueSendToBack(dht_queue,  &data_t_h,( TickType_t ) 0);
+        }
+        xSemaphoreGive(xSemaphore);
+    } else {
+        error_output(argv);
+    }
+}
+
 static void commands_registration(t_pars_tree **commands) {
     t_command_config cc0 = {
             .command = "clear",
             .name_func = clear_command,
     };
+    t_command_config cc1 = {
+            .command = "log",
+            .name_func = print_log_data_dht11,
+    };
 
 
     command_regist(&cc0, commands);
+    command_regist(&cc1, commands);
 }
 
 void uart_event_handler() {
@@ -148,8 +193,8 @@ void uart_event_handler() {
         if (xQueueReceive(uart0_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
             if (event.type == UART_DATA) {
                 uart_data_handler(str, &f, commands);
-                printf("%s\n", str);
-                printf("str = %d  pos = %d\n", f.count_str_size, f.position);
+//                printf("%s\n", str);
+//                printf("str = %d  pos = %d\n", f.count_str_size, f.position);
             }
             if (event.type == UART_BREAK) {
                 printf("UART_BREAK------------------------------\n");
