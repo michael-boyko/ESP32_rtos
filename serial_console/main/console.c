@@ -16,7 +16,6 @@ void app_main() {
     uart_pattern_queue_reset(UART_NUM, 20);
 
     xTaskCreate(uart_event_handler, "read_bytes_from_uart", 120048, NULL, 10, NULL);
-    // xTaskCreate(pulse_led_use_PWM, "pulse_led_use_PWM", 12048, NULL, 10, NULL);
 }
 
 

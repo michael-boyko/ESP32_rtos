@@ -126,43 +126,94 @@ static void clear_command(char *argv) {
     }
 }
 
-static void print_time(TickType_t time) {
-    TickType_t current_time = xTaskGetTickCount();
+//static void print_time(TickType_t time) {
+//    TickType_t current_time = xTaskGetTickCount();
+//
+//    char char_time[10] = {0,0,0,0,0,0,0,0,0,0,};
+//
+//    if (time > 0) {
+//        itoa((current_time - time) / 100, char_time, 10);
+//        uart_write_bytes(UART_NUM, "   ", 3);
+//        uart_write_bytes(UART_NUM, char_time, strlen(char_time));
+//        uart_write_bytes(UART_NUM, " sec ago", 8);
+//    }
+//}
 
-    char char_time[10] = {0,0,0,0,0,0,0,0,0,0,};
+//void print_log_data_dht11(char *argv) {
+//    t_dht11 data_t_h = {0, 0, 0};
+//    uint8_t size = uxQueueMessagesWaiting(dht_queue);
+//    char t[10] = {0,0,0,0,0,0,0,0,0,0,};
+//    char h[10] = {0,0,0,0,0,0,0,0,0,0,};
+//
+//    if (argv == NULL) {
+//        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
+//        for (int i = 0; i < size; i++) {
+//            xQueueReceive(dht_queue,  &data_t_h,( TickType_t ) 0);
+//            uart_write_bytes(UART_NUM, "Temperature ", 12);
+//            itoa(data_t_h.temperature, t, 10);
+//            uart_write_bytes(UART_NUM, t, strlen(t));
+//            uart_write_bytes(UART_NUM, "   ", 3);
+//            uart_write_bytes(UART_NUM, "Humidity ", 9);
+//            itoa(data_t_h.humidity, h, 10);
+//            uart_write_bytes(UART_NUM, h, strlen(h));
+//            print_time(data_t_h.time);
+//            uart_write_bytes(UART_NUM, (char *)buttons.enter, 5);
+//            xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0);
+//        }
+//        xSemaphoreGive(xMutex);
+//    } else {
+//        error_output(argv);
+//    }
+//}
 
-    if (time > 0) {
-        itoa((current_time - time) / 100, char_time, 10);
-        uart_write_bytes(UART_NUM, "   ", 3);
-        uart_write_bytes(UART_NUM, char_time, strlen(char_time));
-        uart_write_bytes(UART_NUM, " sec ago", 8);
+static _Bool is_all_time_line_digit(char **arr) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; arr[i][j] != '\0'; ++j) {
+            if (!isdigit(arr[i][j])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static void check_correct_time_setting(char *argv, char **arr, int arr_size) {
+    uint32_t time = 0;
+    uint8_t hours = 0;
+    uint8_t minutes = 0;
+    uint8_t seconds = 0;
+
+    if (arr_size == 3) {
+        if (is_all_time_line_digit(arr) == true) {
+            hours = atoi(arr[0]);
+            minutes = atoi(arr[1]);
+            seconds = atoi(arr[2]);
+            if (hours < 24 && minutes < 60 && seconds < 60) {
+                time = (hours * 3600 + minutes * 60 + seconds);
+                xQueueSend(set_time_queue, &time, 0);
+            } else {
+                error_output(argv);
+            }
+        } else {
+            error_output(argv);
+        }
+    } else {
+        error_output(argv);
     }
 }
 
-void print_log_data_dht11(char *argv) {
-    t_dht11 data_t_h = {0, 0, 0};
-    uint8_t size = uxQueueMessagesWaiting(dht_queue);
-    char t[10] = {0,0,0,0,0,0,0,0,0,0,};
-    char h[10] = {0,0,0,0,0,0,0,0,0,0,};
+void set_time(char *argv) {
+    char **arr = NULL;
 
-    if (argv == NULL) {
-        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
-        for (int i = 0; i < size; i++) {
-            xQueueReceive(dht_queue,  &data_t_h,( TickType_t ) 0);
-            uart_write_bytes(UART_NUM, "Temperature ", 12);
-            itoa(data_t_h.temperature, t, 10);
-            uart_write_bytes(UART_NUM, t, strlen(t));
-            uart_write_bytes(UART_NUM, "   ", 3);
-            uart_write_bytes(UART_NUM, "Humidity ", 9);
-            itoa(data_t_h.humidity, h, 10);
-            uart_write_bytes(UART_NUM, h, strlen(h));
-            print_time(data_t_h.time);
-            uart_write_bytes(UART_NUM, (char *)buttons.enter, 5);
-            xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0);
+    if (argv != NULL) {
+        if (strlen(argv) == 8) {
+            arr = mx_strsplit(argv, ':');
+            check_correct_time_setting(argv, arr, mx_count_words(argv, ':'));
+        } else {
+            error_output(argv);
         }
-        xSemaphoreGive(xMutex);
     } else {
-        error_output(argv);
+        error_output("NULL");
     }
 }
 
@@ -172,10 +223,9 @@ static void commands_registration(t_pars_tree **commands) {
             .name_func = clear_command,
     };
     t_command_config cc1 = {
-            .command = "log",
-            .name_func = print_log_data_dht11,
+            .command = "set time",
+            .name_func = set_time,
     };
-
 
     command_regist(&cc0, commands);
     command_regist(&cc1, commands);
@@ -193,7 +243,7 @@ void uart_event_handler() {
         if (xQueueReceive(uart0_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
             if (event.type == UART_DATA) {
                 uart_data_handler(str, &f, commands);
-//                printf("%s\n", s0tr);
+//                printf("%s\n", str);
 //                printf("str = %d  pos = %d\n", f.count_str_size, f.position);
             }
             if (event.type == UART_BREAK) {
