@@ -17,7 +17,7 @@
 
 QueueHandle_t uart0_queue;
 QueueHandle_t dht_queue;
-xSemaphoreHandle xSemaphore;
+volatile xSemaphoreHandle xMutex;
 
 typedef struct s_dht11 {
     int temperature;

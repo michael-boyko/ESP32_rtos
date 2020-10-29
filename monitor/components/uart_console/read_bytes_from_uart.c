@@ -128,7 +128,7 @@ static void clear_command(char *argv) {
 
 static void print_time(TickType_t time) {
     TickType_t current_time = xTaskGetTickCount();
-//    printf("%d\n", current_time);
+
     char char_time[10] = {0,0,0,0,0,0,0,0,0,0,};
 
     if (time > 0) {
@@ -146,7 +146,7 @@ void print_log_data_dht11(char *argv) {
     char h[10] = {0,0,0,0,0,0,0,0,0,0,};
 
     if (argv == NULL) {
-        xSemaphoreTake(xSemaphore, ( TickType_t ) 0);
+        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
         for (int i = 0; i < size; i++) {
             xQueueReceive(dht_queue,  &data_t_h,( TickType_t ) 0);
             uart_write_bytes(UART_NUM, "Temperature ", 12);
@@ -158,9 +158,9 @@ void print_log_data_dht11(char *argv) {
             uart_write_bytes(UART_NUM, h, strlen(h));
             print_time(data_t_h.time);
             uart_write_bytes(UART_NUM, (char *)buttons.enter, 5);
-            xQueueSendToBack(dht_queue,  &data_t_h,( TickType_t ) 0);
+            xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0);
         }
-        xSemaphoreGive(xSemaphore);
+        xSemaphoreGive(xMutex);
     } else {
         error_output(argv);
     }

@@ -3,7 +3,7 @@
 void task_get_data_from_dht11() {
     uint32_t adjustment = 0;
     TickType_t x = 0;
-    uint8_t size;
+    uint8_t size = 0;
     int *arr = NULL;
     t_dht11 data_t_h = {0, 0, 0};
     t_dht11 tmp_data_t_h = {0, 0, 0};
@@ -11,10 +11,9 @@ void task_get_data_from_dht11() {
 
     while (true) {
         x = xTaskGetTickCount() - adjustment;
-//        printf("%d/n", adjustment);
         size = uxQueueMessagesWaiting(dht_queue);
-        printf("%d --- %d\n", x, size);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
         arr = get_data_dht11();
         data_t_h.temperature = arr[2];
         data_t_h.humidity = arr[0];
@@ -23,7 +22,6 @@ void task_get_data_from_dht11() {
         } else {
             if (tmp_data_t_h.temperature != data_t_h.temperature ||
                 tmp_data_t_h.humidity != data_t_h.humidity) {
-                printf("tyt\n");
                 data_t_h.time = x;
             } else {
                 data_t_h.time = 0;
@@ -31,13 +29,13 @@ void task_get_data_from_dht11() {
         }
         tmp_data_t_h.temperature = data_t_h.temperature;
         tmp_data_t_h.humidity = data_t_h.humidity;
-        xSemaphoreTake(xSemaphore, (portTickType)portMAX_DELAY);
         if (size == 60) {
             xQueueReceive(dht_queue,  &tmp,( TickType_t ) 0);
             xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0 );
         } else {
             xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0 );
         }
+        xSemaphoreGive(xMutex);
         adjustment += 2;
         free(arr);
     }
@@ -52,7 +50,7 @@ void app_main() {
             .stop_bits = UART_STOP_BITS_1,
             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     };
-    vSemaphoreCreateBinary(xSemaphore);
+    xMutex = xSemaphoreCreateMutex();
     dht_queue =  xQueueCreate( 60, sizeof( t_dht11) );
     uart_driver_install(UART_NUM, 2048, 2048, 20, &uart0_queue, 0);
     uart_param_config(UART_NUM, &uart_config);
