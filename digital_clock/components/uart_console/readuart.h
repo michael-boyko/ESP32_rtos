@@ -12,12 +12,14 @@
 #include "../mylib/mylib.h"
 #include "../oled/oled.h"
 #include "freertos/semphr.h"
+#include "driver/timer.h"
 
 #define UART_NUM UART_NUM_1
 
 QueueHandle_t uart0_queue;
 QueueHandle_t set_time_queue;
 volatile xSemaphoreHandle xMutex;
+TaskHandle_t xTaskToNotify;
 
 typedef struct s_dht11 {
     int temperature;
