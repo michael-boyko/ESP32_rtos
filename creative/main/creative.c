@@ -1,36 +1,5 @@
 #include "creative.h"
 
-//#define EN_AMP 23
-//
-//void make_noise() {
-//    esp_err_t err;
-//    gpio_set_direction(EN_AMP, GPIO_MODE_OUTPUT);
-//    gpio_set_level(EN_AMP, 1);
-//    dac_output_enable(DAC_CHANNEL_1);
-//
-//    static const int i2s_num = 0;
-//    static const i2s_config_t i2s_config = {
-//            .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
-//            .sample_rate      = 44100,
-//            .bits_per_sample  = 16,
-//            .channel_format   = I2S_CHANNEL_FMT_RIGHT_LEFT,
-//            .intr_alloc_flags = 0,
-//            .dma_buf_count    = 2,
-//            .dma_buf_len      = 1024,
-//            .use_apll         = 1
-//    };
-//    i2s_driver_install(i2s_num, &i2s_config, 0, NULL);
-//    i2s_set_pin(i2s_num, NULL);
-//    size_t i2s_bytes_write = 0;
-//
-//    uint8_t audio_table[]= {0xFF};
-////    i2s_stop(0);
-//    while (true) {
-//        i2s_write(0, audio_table, 1, &i2s_bytes_write, 0);
-//        vTaskDelay(1000/portTICK_RATE_MS);
-//    }
-//}
-
 static void IRAM_ATTR timer_group_isr(void *para) {
     xTaskNotifyFromISR(xTaskToNotify, 1, eNoAction, NULL);
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
@@ -76,14 +45,22 @@ static void init_timer() {
 
 void app_main() {
     set_time_queue = xQueueCreate(1, sizeof(uint32_t));
+    dht_queue =  xQueueCreate( 60, sizeof( t_dht11) );
+    dht_on_oled_queue =  xQueueCreate( 1, sizeof( t_dht11) );
+    alarm_queue =  xQueueCreate( 1, sizeof( int ) );
+    set_alarm_queue =  xQueueCreate( 1, sizeof( uint32_t ) );
+    xMutex = xSemaphoreCreateMutex();
+    init_dht11();
     power_on_oled();
     init_timer();
     init_uart();
     init_i2c();
     init_display();
 
+    xTaskCreate(task_get_data_from_dht11, "task_get_data_from_dht11", 12024, NULL, 10, NULL);
     xTaskCreate(uart_event_handler, "read_bytes_from_uart", 12004, NULL, 10, NULL);
+
     xTaskCreate(digital_clock, "digital_clock", 12004, NULL, 10, &xTaskToNotify);
-//    xTaskCreate(make_noise, "make", 12004, NULL, 10, NULL);
+    xTaskCreate(make_noise, "make_noise", 12004, NULL, 10, NULL);
 }
 

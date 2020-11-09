@@ -28,7 +28,7 @@ void init_i2c();
 void power_on_oled();
 void init_display();
 void screen_onto_display(uint8_t **screen);
-void str_in_screen(char *str, uint8_t **screen);
+void str_in_screen(char *str, uint8_t **screen, _Bool is_big);
 void fill_screen_0_or_1(uint8_t **screen, _Bool on_off);
 uint8_t **create_arr();
 

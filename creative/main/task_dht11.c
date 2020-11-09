@@ -5,16 +5,17 @@ void task_get_data_from_dht11() {
     TickType_t x = 0;
     uint8_t size = 0;
     int *arr = NULL;
-    t_dht11 data_t_h = {0, 0, 0};
-    t_dht11 tmp_data_t_h = {0, 0, 0};
+    t_dht11 data_t_h = {24, 32, 0};
+    t_dht11 tmp_data_t_h = {24, 32, 0};
     t_dht11 tmp = {0, 0, 0};
 
+    free(get_data_dht11());
     while (true) {
         x = xTaskGetTickCount() - adjustment;
         size = uxQueueMessagesWaiting(dht_queue);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
         arr = get_data_dht11();
+        xSemaphoreTake(xMutex, (portTickType)portMAX_DELAY);
         data_t_h.temperature = arr[2];
         data_t_h.humidity = arr[0];
         if (size == 0) {
@@ -32,8 +33,10 @@ void task_get_data_from_dht11() {
         if (size == 60) {
             xQueueReceive(dht_queue,  &tmp,( TickType_t ) 0);
             xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0 );
+            xQueueSend(dht_on_oled_queue,  &data_t_h,( TickType_t ) 0 );
         } else {
             xQueueSend(dht_queue,  &data_t_h,( TickType_t ) 0 );
+            xQueueSend(dht_on_oled_queue,  &data_t_h,( TickType_t ) 0 );
         }
         xSemaphoreGive(xMutex);
         adjustment += 2;

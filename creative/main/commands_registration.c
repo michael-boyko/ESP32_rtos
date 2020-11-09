@@ -31,10 +31,30 @@ void commands_registration(t_pars_tree **commands) {
             .command = "set time",
             .name_func = set_time,
     };
+    t_command_config cc5 = {
+            .command = "log",
+            .name_func = print_log_data_dht11,
+    };
+    t_command_config cc6 = {
+            .command = "set alarm",
+            .name_func = set_alarm,
+    };
+    t_command_config cc7 = {
+            .command = "play on",
+            .name_func = play_on,
+    };
+    t_command_config cc8 = {
+            .command = "play off",
+            .name_func = play_off,
+    };
 
     command_regist(&cc0, commands);
     command_regist(&cc1, commands);
     command_regist(&cc2, commands);
     command_regist(&cc3, commands);
     command_regist(&cc4, commands);
+    command_regist(&cc5, commands);
+    command_regist(&cc6, commands);
+    command_regist(&cc7, commands);
+    command_regist(&cc8, commands);
 }

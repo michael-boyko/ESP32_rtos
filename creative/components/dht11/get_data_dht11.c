@@ -22,7 +22,7 @@ static void set_up_dht11(int *check) {
 
     *check = get_level(80, 0);
     if (*check <= 0)
-        write(2, "ERROR: set_up_dht11 0\n", 22);
+        write(2,    "ERROR: set_up_dht11 0\n", 22);
     *check = get_level(80, 1);
     if (*check <= 0)
         write(2, "ERROR: set_up_dht11 1\n", 22);

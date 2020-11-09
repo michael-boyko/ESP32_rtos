@@ -15,5 +15,9 @@ void led_on(char *argv);
 void led_off(char *argv);
 void led_pulse(char *argv);
 void set_time(char *argv);
+void print_log_data_dht11(char *argv);
+void set_alarm(char *argv);
+void play_on(char *argv);
+void play_off(char *argv);
 
 #endif

@@ -20,10 +20,14 @@
 #include "driver/dac.h"
 
 #define UART_NUM UART_NUM_1
+#define EN_AMP 23
 
 QueueHandle_t uart0_queue;
 QueueHandle_t set_time_queue;
 QueueHandle_t dht_queue;
+QueueHandle_t dht_on_oled_queue;
+QueueHandle_t alarm_queue;
+QueueHandle_t set_alarm_queue;
 
 volatile xSemaphoreHandle xMutex;
 TaskHandle_t xTaskToNotify;
